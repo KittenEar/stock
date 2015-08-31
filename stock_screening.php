@@ -22,9 +22,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // [セッションに値を保存]
 
-// 初期状態は全選択状態とする
+// 初期状態の市場は"全選択"状態とする
 if ( ! $selectedMarkets ) {
-    $selectedMarkets = "";
+    $selectedMarkets = array();
+
+    $stock->getMarketList();
+
+    while ($result = $stock->getNext()) {
+        array_push($selectedMarkets, $result[0]);
+    }
 }
 
 // 初期状態のソートは"コード"
@@ -33,7 +39,7 @@ if ( ! $sort ) {
 }
 
 // 初期状態のオーダーは"昇順"
-if ( ! order ) {
+if ( ! $order ) {
     $order = "asc";
 }
 
@@ -45,8 +51,6 @@ $_SESSION[StockParamModel::KEY_NAME_ORDER] = $order;
 
 // 選択市場状態を取得
 // $selectedMarkets = $_SESSION[StockParamModel::KEY_NAME_SELECTED_MARKETS];
-
-Debug::logPrintR($selectedMarkets);
 
 
 
@@ -97,15 +101,12 @@ $(function() {
 <p>
 市場<p>
 <?php
-
-
-
 $selectedMarketsName = StockParamModel::KEY_NAME_SELECTED_MARKETS;
 
 $stock->getMarketList();
 while ($result = $stock->getNext()) {
     // 除外市場判定
-    $checked = in_array($result[0], $selectedMarkets, true) ? "" : "checked='checked'";
+    $checked = in_array($result[0], $selectedMarkets, true) ? "checked='checked'" : "";
 
     echo "<input type='checkbox' name='{$selectedMarketsName}[]' value='{$result[0]}' {$checked}>{$result[0]}<br>";
 }

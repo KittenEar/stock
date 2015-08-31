@@ -8,29 +8,17 @@ class Stock
 {
     /**
      * DB接続文字列
+     *
+     * @var string
      */
-    const PDO_CONNECT = "sqlite:stock.db";
+    private $pdoConnect = "sqlite:stock.db";
 
     /**
-     * 株価データを取得するURL
+     * 株価データを取得する
+     *
+     * @var string
      */
-    const URL_FORMAT = "http://k-db.com/stocks/%s?download=csv";
-
-    /**
-     * 株価データ出力項目リスト
-     */
-    const ITEM_NAMES = [
-        "コード",
-        "銘柄名",
-        "市場",
-        "始値",
-        "高値",
-        "安値",
-        "終値",
-        "高値-安値",
-        "出来高",
-        "売買代金"
-    ];
+    private $urlFormat = "http://k-db.com/stocks/%s?download=csv";
 
     /**
      * 株価データ出力項目リスト
@@ -83,7 +71,7 @@ class Stock
 
         try {
 
-            $db = new PDO(self::PDO_CONNECT);
+            $db = new PDO($this->pdoConnect);
 
             $sql =
                 "CREATE TABLE stock( " .
@@ -136,7 +124,7 @@ class Stock
 
         try {
 
-            $db = new PDO(self::PDO_CONNECT);
+            $db = new PDO($this->pdoConnect);
 
             // 存在チェック
             $sql = "SELECT COUNT(code) AS ID FROM stock WHERE date = '$date'";
@@ -147,7 +135,7 @@ class Stock
             if ($result[0] == 0) {
 
                 // CSVファイルダウンロード
-                $url = sprintf(self::URL_FORMAT, $date);
+                $url = sprintf($this->urlFormat, $date);
                 $str = file_get_contents($url);
 
                 // "SJIS" -> "UTF-8"
@@ -233,21 +221,23 @@ class Stock
      * ★TODO:
      * @return boolean 成功 true、失敗 false
      */
-    public function getPrepare($date, $exclusionMarkets = "", $sort = "コード", $order = "asc") {
+    public function getPrepare($date, $selectedMarkets = "", $sort = "コード", $order = "asc") {
 
         if ( ! $this->checkDate($date) ) {
             return false;
         }
 
         $sortIndex = array_search($sort, $this->itemNames, true);
-        $itemNames = self::ITEM_NAMES;
+        $itemNames = $this->itemNames;
 
+        $marketsSql = "(";
+        foreach ($selectedMarkets as $value) {
+            $marketsSql .= " {$itemNames[2]} = '{$value}' OR";
+        }
+        $marketsSql = rtrim($marketsSql, "OR");
+        $marketsSql .= ") AND ";
 
-        Debug::logPrintR($exclusionMarkets);
-        Debug::logPrintR($sortIndex);
-        Debug::logPrintR($order);
-
-        $db = new PDO(self::PDO_CONNECT);
+        $db = new PDO($this->pdoConnect);
 
         // 株価データ取得
         $sql =
@@ -266,14 +256,16 @@ class Stock
             "  stock " .
             "WHERE " .
             "  date = '$date'       AND " .
-            "  {$itemNames[8]} >= 1000000 AND " .
-            "  {$itemNames[6]} >= 200     AND " .
-            "  {$itemNames[6]} < 8000     AND " .
-            "  range_price >= 30        AND " .
-            "  {$itemNames[2]} <> '東証' " .
+            $marketsSql .
+            "  range_price >= 30              " .
             "ORDER BY " .
             "  {$itemNames[$sortIndex]} {$order} ";
+            // "  {$itemNames[8]} >= 1000000 AND " .
+            // "  {$itemNames[6]} >= 200     AND " .
+            // "  {$itemNames[6]} < 8000     AND " .
 
+
+        // Debug::logPrintR($sql);
 
         $this->stmt = $db->query($sql);
 
@@ -289,7 +281,7 @@ class Stock
      */
     public function getMarketList() {
 
-        $db = new PDO(self::PDO_CONNECT);
+        $db = new PDO($this->pdoConnect);
 
         $sql =
             "SELECT " .
