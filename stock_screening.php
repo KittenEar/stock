@@ -10,17 +10,29 @@ $stock = new Stock();
 $stockParamModel = new StockParamModel();
 
 // [ポストされた値を取得]
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $searchDate = $_POST[StockParamModel::KEY_NAME_SEARCH_DATE];
     $selectedMarkets = $_POST[StockParamModel::KEY_NAME_SELECTED_MARKETS];
+    $closingPrice = $_POST[StockParamModel::KEY_NAME_CLOSING_PRICE];
+    $rangePrice = $_POST[StockParamModel::KEY_NAME_RANGE_PRICE];
+    $volume = $_POST[StockParamModel::KEY_NAME_VOLUME];
     $sort = $_POST[StockParamModel::KEY_NAME_SORT];
     $order = $_POST[StockParamModel::KEY_NAME_ORDER];
 
+}
+// [セッションから値を取得]
+else {
+    $searchDate = "";
+    $selectedMarkets = $_SESSION[StockParamModel::KEY_NAME_SELECTED_MARKETS];
+    $closingPrice = $_SESSION[StockParamModel::KEY_NAME_CLOSING_PRICE];
+    $rangePrice = $_SESSION[StockParamModel::KEY_NAME_RANGE_PRICE];
+    $volume = $_SESSION[StockParamModel::KEY_NAME_VOLUME];
+    $sort = $_SESSION[StockParamModel::KEY_NAME_SORT];
+    $order = $_SESSION[StockParamModel::KEY_NAME_ORDER];
 
 }
 
-// [セッションに値を保存]
+// [初期値設定]
 
 // 初期状態の市場は"全選択"状態とする
 if ( ! $selectedMarkets ) {
@@ -43,15 +55,15 @@ if ( ! $order ) {
     $order = "asc";
 }
 
+// [セッションに値を保存]
+
+// 検索日付は保存しない
 $_SESSION[StockParamModel::KEY_NAME_SELECTED_MARKETS] = $selectedMarkets;
+$_SESSION[StockParamModel::KEY_NAME_CLOSING_PRICE] = $closingPrice;
+$_SESSION[StockParamModel::KEY_NAME_RANGE_PRICE] = $rangePrice;
+$_SESSION[StockParamModel::KEY_NAME_VOLUME] = $volume;
 $_SESSION[StockParamModel::KEY_NAME_SORT] = $sort;
 $_SESSION[StockParamModel::KEY_NAME_ORDER] = $order;
-
-// [セッションから値を取得]
-
-// 選択市場状態を取得
-// $selectedMarkets = $_SESSION[StockParamModel::KEY_NAME_SELECTED_MARKETS];
-
 
 
 // 空白や無効な日付形式の場合
@@ -72,7 +84,9 @@ $stock->add($date);
 <!Doctype html>
 <html lang = "ja">
 <head>
+<title>銘柄スクリーニング</title>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="common.css">
 
 <!-- jQuery -->
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
@@ -92,13 +106,15 @@ $(function() {
 
 </head>
 <body>
-
+<h3>銘柄スクリーニング</h3>
 <form action = "" method = "POST">
-検索日付<input type = "text" id = "datepicker" name = "<?php echo StockParamModel::KEY_NAME_SEARCH_DATE ?>" placeholder = "2015-01-01"
-  value = "<?php echo htmlspecialchars($searchDate, ENT_QUOTES, 'UTF-8'); ?>"
+検索日付
+<input type = "text" id = "datepicker" name = "<?php echo StockParamModel::KEY_NAME_SEARCH_DATE ?>"
+  placeholder = "2015-01-01" value = "<?php echo htmlspecialchars($searchDate, ENT_QUOTES, 'UTF-8'); ?>"
 >
 <input type = "submit" value = "実行">
 <p>
+
 市場<p>
 <?php
 $selectedMarketsName = StockParamModel::KEY_NAME_SELECTED_MARKETS;
@@ -113,6 +129,45 @@ while ($result = $stock->getNext()) {
 ?>
 </select>
 <p>
+
+終値
+最小
+<input type = "text" class = "custom" name = "<?php echo StockParamModel::KEY_NAME_CLOSING_PRICE ?>[]"
+  value = "<?php echo htmlspecialchars($closingPrice[0], ENT_QUOTES, 'UTF-8'); ?>"
+>
+〜
+<input type = "text" class = "custom" name = "<?php echo StockParamModel::KEY_NAME_CLOSING_PRICE ?>[]"
+  value = "<?php echo htmlspecialchars($closingPrice[1], ENT_QUOTES, 'UTF-8'); ?>"
+>
+最大
+<p>
+
+<p>
+
+高値-安値
+最小
+<input type = "text" class = "custom" name = "<?php echo StockParamModel::KEY_NAME_RANGE_PRICE ?>[]"
+  value = "<?php echo htmlspecialchars($rangePrice[0], ENT_QUOTES, 'UTF-8'); ?>"
+>
+〜
+<input type = "text" class = "custom" name = "<?php echo StockParamModel::KEY_NAME_RANGE_PRICE ?>[]"
+  value = "<?php echo htmlspecialchars($rangePrice[1], ENT_QUOTES, 'UTF-8'); ?>"
+>
+最大
+<p>
+
+出来高
+最小
+<input type = "text" class = "custom" name = "<?php echo StockParamModel::KEY_NAME_VOLUME ?>[]"
+  value = "<?php echo htmlspecialchars($volume[0], ENT_QUOTES, 'UTF-8'); ?>"
+>
+〜
+<input type = "text" class = "custom" name = "<?php echo StockParamModel::KEY_NAME_VOLUME ?>[]"
+  value = "<?php echo htmlspecialchars($volume[1], ENT_QUOTES, 'UTF-8'); ?>"
+>
+最大
+<p>
+
 並べ替え
 <select name = "sort">
 <?php
@@ -145,7 +200,7 @@ foreach ($orderKey as $key => $value) {
 
 <?php
 
-$stock->getPrepare($date, $selectedMarkets, $sort, $order);
+$stock->getPrepare($date, $selectedMarkets, $closingPrice, $rangePrice, $volume, $sort, $order);
 
 echo "<table rules='all' border='1' cellspacing='0' cellpadding='2' style='font-size : 14px;' bordercolor='#a0b0ff'>";
 echo "<caption>$date</caption>";

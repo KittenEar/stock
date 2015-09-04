@@ -221,21 +221,33 @@ class Stock
      * ★TODO:
      * @return boolean 成功 true、失敗 false
      */
-    public function getPrepare($date, $selectedMarkets = "", $sort = "コード", $order = "asc") {
+    public function getPrepare($date, $selectedMarkets = "", $closingPrice = "", $rangePrice = "", $volume = "", $sort = "コード", $order = "asc") {
 
         if ( ! $this->checkDate($date) ) {
             return false;
         }
 
-        $sortIndex = array_search($sort, $this->itemNames, true);
         $itemNames = $this->itemNames;
 
-        $marketsSql = "(";
+        // 市場
+        $marketsSql = "AND (";
         foreach ($selectedMarkets as $value) {
             $marketsSql .= " {$itemNames[2]} = '{$value}' OR";
         }
         $marketsSql = rtrim($marketsSql, "OR");
-        $marketsSql .= ") AND ";
+        $marketsSql .= ") ";
+
+        // 終値
+        $closingPriceSql = $this->createWhereSqlMinMaxPrice($closingPrice, $itemNames[6]);
+
+        // 高値-安値
+        $rangePriceSql = $this->createWhereSqlMinMaxPrice($rangePrice, "range_price");
+
+        // 出来高
+        $volumeSql = $this->createWhereSqlMinMaxPrice($volume, $itemNames[8]);
+
+        // ソート項目
+        $sortIndex = array_search($sort, $this->itemNames, true);
 
         $db = new PDO($this->pdoConnect);
 
@@ -255,15 +267,13 @@ class Stock
             "FROM " .
             "  stock " .
             "WHERE " .
-            "  date = '$date'       AND " .
+            "  date = '$date'       " .
             $marketsSql .
-            "  range_price >= 30              " .
+            $closingPriceSql .
+            $rangePriceSql .
+            $volumeSql .
             "ORDER BY " .
             "  {$itemNames[$sortIndex]} {$order} ";
-            // "  {$itemNames[8]} >= 1000000 AND " .
-            // "  {$itemNames[6]} >= 200     AND " .
-            // "  {$itemNames[6]} < 8000     AND " .
-
 
         // Debug::logPrintR($sql);
 
@@ -319,6 +329,29 @@ class Stock
         return strtotime($date);
     }
 
+    /**
+     * 最小〜最大の範囲を持つ項目のWHERE SQLを作成する
+     *
+     * @param 配列 $priceArray 最小最大の要素を含む配列 [0]:最小 [1]:最大
+     * @param 文字列 $compItemName 比較する項目名
+     * @return string SQL文字列
+     */
+    private function createWhereSqlMinMaxPrice($priceArray, $compItemName) {
+
+        $retSql = "";
+
+        if (count($priceArray) === 2) {
+            $sign = [">=", "<="];
+
+            foreach ($priceArray as $key => $value) {
+                if ($value) {
+                    $retSql .= " AND {$compItemName} {$sign[$key]} {$value} ";
+                }
+            }
+        }
+
+        return $retSql;
+    }
 
 }
 
