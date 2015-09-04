@@ -3,6 +3,9 @@
 
 require_once "autoload.php";
 
+// エラーを出力する
+// ini_set('display_errors', 1);
+
 session_start();
 
 
@@ -220,7 +223,7 @@ while ($result = $stock->getNext()) {
 
     echo "<td align='right'>" . $count . "</td>";
     foreach ($result as $key => $value) {
-        if ($key >= 3) {
+        if ($key >= 3 && is_numeric($value)) {
             echo "<td align='right'>" . number_format($value) . "</td>";
         }
         else {
