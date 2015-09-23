@@ -79,8 +79,6 @@ else {
     $date = date("Y-m-d", strtotime($searchDate));
 }
 
-$stock->createDB();
-$stock->add($date);
 
 ?>
 

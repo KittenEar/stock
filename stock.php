@@ -14,13 +14,6 @@ class Stock
     private $pdoConnect = "sqlite:stock.db";
 
     /**
-     * 株価データを取得する
-     *
-     * @var string
-     */
-    private $urlFormat = "http://k-db.com/stocks/%s?download=csv";
-
-    /**
      * 株価データ出力項目リスト
      *
      * @var array
@@ -29,6 +22,7 @@ class Stock
         "コード",
         "銘柄名",
         "市場",
+        // "前日終値",
         "始値",
         "高値",
         "安値",
@@ -111,14 +105,16 @@ class Stock
     /**
      * 株価データを追加する
      *
-     * @param 文字列 $date 日付形式("yyyy-MM-dd")の文字列
+     * @param DateTime $dateObj 追加する日付
      * @return boolean 成功 true、失敗 false
      */
-    public function add($date) {
+    public function add($dateObj) {
 
-        if ( ! $this->checkDate($date) ) {
+        if ( ! $dateObj instanceof DateTime ) {
             return false;
         }
+
+        $date = $dateObj->format(Common::DATE_FORMAT);
 
         $db = null;
 
@@ -134,26 +130,14 @@ class Stock
             // DBに存在しないので追加する
             if ($result[0] == 0) {
 
-                // CSVファイルダウンロード
-                $url = sprintf($this->urlFormat, $date);
-                $str = file_get_contents($url);
+                // CSVファイルパス作成
+                $csvFilePath = Common::CSV_FILE_PATH . sprintf(Common::STOCK_CSV_FILE_NAME, $date);
+                $str = file_get_contents($csvFilePath);
 
                 // "SJIS" -> "UTF-8"
                 $encodingStr = mb_convert_encoding($str, "UTF-8", "SJIS");
                 $parseLine = explode("\r\n", $encodingStr);
                 $lineCount = count($parseLine);
-
-                // 取引が行われない土日などの日付でダウンロードすると
-                // 最新のデータが取得されるので、
-                // 入力した日付と実際に取得したデータの日付が一致するかチェックする
-                $csvDate = DateTime::createFromFormat("Y年m月d日", $parseLine[0]);
-                $checkDate = $csvDate->format('Y-m-d');
-
-                // パラメータの日付が正しくない場合
-                if ($date != $checkDate) {
-                    $db = null;
-                    return false;
-                }
 
                 $db->beginTransaction();
 
