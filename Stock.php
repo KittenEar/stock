@@ -22,11 +22,13 @@ class Stock
         "コード",
         "銘柄名",
         "市場",
-        // "前日終値",
+        "前日終値",
         "始値",
         "高値",
         "安値",
         "終値",
+        "前日比",
+        "騰落率",
         "高値-安値",
         "出来高",
         "売買代金");
@@ -222,13 +224,13 @@ class Stock
         $marketsSql .= ") ";
 
         // 終値
-        $closingPriceSql = $this->createWhereSqlMinMaxPrice($closingPrice, $itemNames[6]);
+        $closingPriceSql = $this->createWhereSqlMinMaxPrice($closingPrice, $itemNames[7]);
 
         // 高値-安値
         $rangePriceSql = $this->createWhereSqlMinMaxPrice($rangePrice, "range_price");
 
         // 出来高
-        $volumeSql = $this->createWhereSqlMinMaxPrice($volume, $itemNames[8]);
+        $volumeSql = $this->createWhereSqlMinMaxPrice($volume, $itemNames[11]);
 
         // ソート項目
         $sortIndex = array_search($sort, $this->itemNames, true);
@@ -238,18 +240,38 @@ class Stock
         // 株価データ取得
         $sql =
             "SELECT " .
-            "  code                   AS {$itemNames[0]}, " .
-            "  stock_name             AS {$itemNames[1]}, " .
-            "  market                 AS {$itemNames[2]}, " .
-            "  opening_price          AS {$itemNames[3]}, " .
-            "  high_price             AS {$itemNames[4]}, " .
-            "  low_price              AS {$itemNames[5]}, " .
-            "  closing_price          AS {$itemNames[6]}, " .
-            "  high_price - low_price AS range_price, " .
-            "  volume                 AS {$itemNames[8]}, " .
-            "  trading_value          AS {$itemNames[9]} " .
+            "  MAIN.code                   AS {$itemNames[0]}, " .
+            "  MAIN.stock_name             AS {$itemNames[1]}, " .
+            "  MAIN.market                 AS {$itemNames[2]}, " .
+            "  DAY_BEFORE.closing_price    AS {$itemNames[3]}, " .
+            "  MAIN.opening_price          AS {$itemNames[4]}, " .
+            "  MAIN.high_price             AS {$itemNames[5]}, " .
+            "  MAIN.low_price              AS {$itemNames[6]}, " .
+            "  MAIN.closing_price          AS {$itemNames[7]}, " .
+            "  MAIN.closing_price - DAY_BEFORE.closing_price          AS {$itemNames[8]}, " .
+            "  cast((MAIN.closing_price - DAY_BEFORE.closing_price) as REAL) / DAY_BEFORE.closing_price * 100 AS {$itemNames[9]}, " .
+            "  MAIN.high_price - low_price AS range_price, " .
+            "  MAIN.volume                 AS {$itemNames[11]}, " .
+            "  MAIN.trading_value          AS {$itemNames[12]} " .
             "FROM " .
-            "  stock " .
+            "  stock AS MAIN LEFT JOIN " .
+            "    (SELECT " .                        // 前日終値を取得する
+            "      code, " .
+            "      closing_price ".
+            "    FROM " .
+            "      stock " .
+            "    WHERE " .
+            "      date = ( " .
+            "        SELECT " .                     // 指定日付の前日を取得
+            "          date " .
+            "        FROM " .
+            "          stock " .
+            "        WHERE " .
+            "          date < '$date' " .
+            "        ORDER BY " .
+            "          date DESC " .
+            "        LIMIT 1 ) " .
+            "    ) AS DAY_BEFORE ON MAIN.code = DAY_BEFORE.code " .
             "WHERE " .
             "  date = '$date'       " .
             $marketsSql .
@@ -299,7 +321,7 @@ class Stock
      */
     public function getNext() {
 
-        return $this->stmt ? $this->stmt->fetch(PDO::FETCH_NUM) : false;
+        return $this->stmt ? $this->stmt->fetch(PDO::FETCH_ASSOC) : false;
     }
 
     /**

@@ -44,7 +44,12 @@ if ( ! $selectedMarkets ) {
     $stock->getMarketList();
 
     while ($result = $stock->getNext()) {
-        array_push($selectedMarkets, $result[0]);
+
+        $keys = array_keys($result);
+
+        foreach ($keys as $key) {
+            array_push($selectedMarkets, $result[$key]);
+        }
     }
 }
 
@@ -122,10 +127,15 @@ $selectedMarketsName = StockParamModel::KEY_NAME_SELECTED_MARKETS;
 
 $stock->getMarketList();
 while ($result = $stock->getNext()) {
-    // 除外市場判定
-    $checked = in_array($result[0], $selectedMarkets, true) ? "checked='checked'" : "";
 
-    echo "<input type='checkbox' name='{$selectedMarketsName}[]' value='{$result[0]}' {$checked}>{$result[0]}<br>";
+    $keys = array_keys($result);
+
+    foreach ($keys as $key) {
+        // 除外市場判定
+        $checked = in_array($result[$key], $selectedMarkets, true) ? "checked='checked'" : "";
+
+        echo "<input type='checkbox' name='{$selectedMarketsName}[]' value='{$result[$key]}' {$checked}>{$result[$key]}<br>";
+    }
 }
 ?>
 </select>
@@ -220,9 +230,28 @@ while ($result = $stock->getNext()) {
     echo "<tr>";
 
     echo "<td align='right'>" . $count . "</td>";
-    foreach ($result as $key => $value) {
-        if ($key >= 3 && is_numeric($value)) {
-            echo "<td align='right'>" . number_format($value) . "</td>";
+
+    $keys = array_keys($result);
+    $countMax = count($keys);
+
+    for ($i = 0; $i < $countMax; $i++) {
+
+        $key = $keys[$i];
+        $value = $result[$key];
+
+        if ($i >= 3 && is_numeric($value)) {
+
+            $colorValue = "000000";
+
+            // 前日比 または 騰落率 は文字色を変える
+            if ($key === '前日比' || $key === '騰落率') {
+                $colorValue = ($value < 0) ? $colorValue = "008822" : $colorValue = "FF0000";
+            }
+
+            // 桁区切りを行う。小数点以下が0埋めされるので空白で置き換え
+            echo "<td align='right'><span style='color: #{$colorValue}'>" .
+                preg_replace("/\.?0+$/", "", number_format($value, 2)) .
+                "</span></td>";
         }
         else {
             echo "<td>$value</td>";
