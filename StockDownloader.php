@@ -9,24 +9,13 @@ require_once "autoload.php";
 class StockDownloader
 {
     /**
-     * ファイル取得URL
-     *
-     * @var string
-     */
-    private $urlFormat = "http://k-db.com/stocks/%s?download=csv";
-
-    private $saveFolder = './stocks/';
-
-    private $dateFormat = 'Y-m-d';
-
-    /**
      * コンストラクタ
      */
     public function __construct() {
 
-        if ( ! file_exists($this->saveFolder) ) {
+        if ( ! file_exists(Common::CSV_FILE_PATH) ) {
             // ファイル保存フォルダ作成
-            mkdir($this->saveFolder, 0755);
+            mkdir(Common::CSV_FILE_PATH, 0755);
         }
     }
 
@@ -45,7 +34,7 @@ class StockDownloader
 
         $ymdDate = $dateObj->format(Common::DATE_FORMAT);
         $filename = sprintf(Common::STOCK_CSV_FILE_NAME, $ymdDate);
-        $filepath = $this->saveFolder . $filename;
+        $filepath = Common::CSV_FILE_PATH . $filename;
         $week = $dateObj->format("w");      // 曜日(0:日曜 〜 6:土曜)
 
         // 土日チェック
@@ -62,7 +51,7 @@ class StockDownloader
         }
 
         // CSVファイルダウンロード
-        $url = sprintf($this->urlFormat, $ymdDate);
+        $url = sprintf(Common::STOCK_CSV_URL, $ymdDate);
         $str = file_get_contents($url);
 
         if ( ! $str ) {
