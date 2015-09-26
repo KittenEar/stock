@@ -112,7 +112,8 @@ $(function() {
 
 </head>
 <body>
-<h3>銘柄スクリーニング</h3>
+<p><a href="./index.html">戻る</a>
+<p><h3>銘柄スクリーニング</h3>
 <form action = "" method = "POST">
 検索日付
 <input type = "text" id = "datepicker" name = "<?php echo StockParamModel::KEY_NAME_SEARCH_DATE ?>"

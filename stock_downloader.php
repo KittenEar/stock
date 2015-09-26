@@ -5,6 +5,8 @@
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 </head>
 <body>
+<p><a href="./index.html">戻る</a>
+<p><h3>銘柄情報取得</h3>
 <progress id='progress' value='0' max='100'><span id="progressValue">0</span></progress>
 <span id="currentProcess"></span>
 </body>
