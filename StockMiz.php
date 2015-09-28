@@ -11,7 +11,7 @@ class StockMiz
      *
      * @var string
      */
-    private $pdoConnect = "sqlite:stock_miz.db";
+    private $pdoConnect = "sqlite:stock.db";
 
     /**
      * 株価取得用ステートメント
