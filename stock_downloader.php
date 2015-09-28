@@ -42,7 +42,7 @@ while ($date <= $nowDate) {
         echo "var currentProcess = document.getElementById('currentProcess');";
         echo "progressBar.value = {$progressPer};";
         echo "progressBarValue.innerHTML = {$progressPer};";
-        echo "currentProcess.innerHTML = '{$date->format('Y-m-d')}';";
+        echo "currentProcess.innerHTML = '{$date->format(Common::DATE_FORMAT)}';";
         echo "</script>";
     }
 
@@ -52,7 +52,7 @@ while ($date <= $nowDate) {
     // 株価データを追加
     $stock->add($date);
 
-    // echo "{$date->format('Y-m-d')}</br>";
+    // echo "{$date->format(Common::DATE_FORMAT)}</br>";
     ob_flush();
     flush();
 
