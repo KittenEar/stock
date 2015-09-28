@@ -71,17 +71,17 @@ class Stock
 
             $sql =
                 "CREATE TABLE stock( " .
-                "  'code' text , " .
-                "  'date' text , " .
-                "  'market' text, " .
-                "  'stock_name' text, " .
-                "  'business_type' text, " .
-                "  'opening_price' integer, " .
-                "  'high_price' integer, " .
-                "  'low_price' integer, " .
-                "  'closing_price' integer, " .
-                "  'volume' integer, " .
-                "  'trading_value' integer, " .
+                "  'code' TEXT , " .
+                "  'date' TEXT , " .
+                "  'market' TEXT, " .
+                "  'stock_name' TEXT, " .
+                "  'business_type' TEXT, " .
+                "  'opening_price' REAL, " .
+                "  'high_price' REAL, " .
+                "  'low_price' REAL, " .
+                "  'closing_price' REAL, " .
+                "  'volume' INTEGER, " .
+                "  'trading_value' INTEGER, " .
                 "  PRIMARY KEY(code, date)) ";
 
             $db->query($sql);
