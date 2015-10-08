@@ -18,8 +18,11 @@ require_once "autoload.php";
 
 $downloader = new StockDownloader();
 $stock = new Stock();
-
 $stock->createDB();
+
+$mizDownloader = new StockMizDownloader();
+$stockMiz = new StockMiz();
+$stockMiz->createDB();
 
 $date = new DateTime("2015-09-01");
 $nowDate = new DateTime();
@@ -51,6 +54,12 @@ while ($date <= $nowDate) {
 
     // 株価データを追加
     $stock->add($date);
+
+    // 株価ZIPファイルをダウンロード
+    $ret = $mizDownloader->downloadZipFile($date);
+
+    // 株価データを追加
+    $stockMiz->add($date);
 
     // echo "{$date->format(Common::DATE_FORMAT)}</br>";
     ob_flush();
