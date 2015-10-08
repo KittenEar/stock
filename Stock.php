@@ -31,6 +31,8 @@ class Stock
         "騰落率",
         "高値-安値",
         "出来高",
+        "単元株数",
+        "単元出来高",
         "売買代金");
 
     /**
@@ -207,7 +209,7 @@ class Stock
      * ★TODO:
      * @return boolean 成功 true、失敗 false
      */
-    public function getPrepare($date, $selectedMarkets = "", $closingPrice = "", $rangePrice = "", $volume = "", $sort = "コード", $order = "asc") {
+    public function getPrepare($date, $selectedMarkets = "", $closingPrice = "", $rangePrice = "", $volume = "", $unitShares = "", $unitVolume = "", $sort = "コード", $order = "asc") {
 
         if ( ! $this->checkDate($date) ) {
             return false;
@@ -232,6 +234,12 @@ class Stock
         // 出来高
         $volumeSql = $this->createWhereSqlMinMaxPrice($volume, $itemNames[11]);
 
+        // 単元株数
+        $unitSharesSql = $this->createWhereSqlMinMaxPrice($unitShares, $itemNames[12]);
+
+        // 単元出来高
+        $unitVolumeSql = $this->createWhereSqlMinMaxPrice($unitVolume, $itemNames[13]);
+
         // ソート項目
         $sortIndex = array_search($sort, $this->itemNames, true);
 
@@ -252,7 +260,9 @@ class Stock
             "  cast((MAIN.closing_price - DAY_BEFORE.closing_price) as REAL) / DAY_BEFORE.closing_price * 100 AS {$itemNames[9]}, " .
             "  MAIN.high_price - low_price AS range_price, " .
             "  MAIN.volume                 AS {$itemNames[11]}, " .
-            "  MAIN.trading_value          AS {$itemNames[12]} " .
+            "  MIZ.unit_shares             AS {$itemNames[12]}, " .
+            "  MIZ.unit_volume             AS {$itemNames[13]}, " .
+            "  MAIN.trading_value          AS {$itemNames[14]} " .
             "FROM " .
             "  stock AS MAIN LEFT JOIN " .
             "    (SELECT " .                        // 前日終値を取得する
@@ -271,13 +281,32 @@ class Stock
             "        ORDER BY " .
             "          date DESC " .
             "        LIMIT 1 ) " .
-            "    ) AS DAY_BEFORE ON MAIN.code = DAY_BEFORE.code " .
+            "    ) AS DAY_BEFORE ON MAIN.code = DAY_BEFORE.code LEFT JOIN " .
+            "    (SELECT " .
+            "      code || '-T' AS JOIN_CODE, " .
+            "      '20' || SUBSTR(date, 1, 2) || '-' || SUBSTR(date, 3, 2) || '-' || SUBSTR(date, 5, 2) AS JOIN_DATE, " .
+            "      unit_shares, " .
+            "      unit_volume, " .
+            "      per, " .
+            "      pbr, " .
+            "      avg5days, " .
+            "      avg25days, " .
+            "      avg75days, " .
+            "      avg5days_updown, " .
+            "      avg25days_updown, " .
+            "      avg75days_updown, " .
+            "      volume_rate, " .
+            "      before_5days_updown " .
+            "    FROM " .
+            "      stock_miz ) AS MIZ ON MAIN.code = MIZ.JOIN_CODE AND MAIN.date = MIZ.JOIN_DATE " .
             "WHERE " .
-            "  date = '$date'       " .
+            "  MAIN.date = '$date'       " .
             $marketsSql .
             $closingPriceSql .
             $rangePriceSql .
             $volumeSql .
+            $unitSharesSql .
+            $unitVolumeSql .
             "ORDER BY " .
             "  {$itemNames[$sortIndex]} {$order} ";
 

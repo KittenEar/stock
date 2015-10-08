@@ -13,7 +13,8 @@ class StockParamModel
     const KEY_NAME_CLOSING_PRICE = "closing_price";
     const KEY_NAME_SORT = "sort";
     const KEY_NAME_ORDER = "order";
-
+    const KEY_NAME_UNIT_SHARES = "unit_shares";
+    const KEY_NAME_UNIT_VOLUME = "unit_volume";
 
 
     // private $searchDate;                // 検索日付

@@ -19,6 +19,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $closingPrice = $_POST[StockParamModel::KEY_NAME_CLOSING_PRICE];
     $rangePrice = $_POST[StockParamModel::KEY_NAME_RANGE_PRICE];
     $volume = $_POST[StockParamModel::KEY_NAME_VOLUME];
+    $unitShares = $_POST[StockParamModel::KEY_NAME_UNIT_SHARES];
+    $unitVolume = $_POST[StockParamModel::KEY_NAME_UNIT_VOLUME];
     $sort = $_POST[StockParamModel::KEY_NAME_SORT];
     $order = $_POST[StockParamModel::KEY_NAME_ORDER];
 
@@ -30,6 +32,8 @@ else {
     $closingPrice = $_SESSION[StockParamModel::KEY_NAME_CLOSING_PRICE];
     $rangePrice = $_SESSION[StockParamModel::KEY_NAME_RANGE_PRICE];
     $volume = $_SESSION[StockParamModel::KEY_NAME_VOLUME];
+    $unitShares = $_POST[StockParamModel::KEY_NAME_UNIT_SHARES];
+    $unitVolume = $_POST[StockParamModel::KEY_NAME_UNIT_VOLUME];
     $sort = $_SESSION[StockParamModel::KEY_NAME_SORT];
     $order = $_SESSION[StockParamModel::KEY_NAME_ORDER];
 
@@ -70,6 +74,8 @@ $_SESSION[StockParamModel::KEY_NAME_SELECTED_MARKETS] = $selectedMarkets;
 $_SESSION[StockParamModel::KEY_NAME_CLOSING_PRICE] = $closingPrice;
 $_SESSION[StockParamModel::KEY_NAME_RANGE_PRICE] = $rangePrice;
 $_SESSION[StockParamModel::KEY_NAME_VOLUME] = $volume;
+$_SESSION[StockParamModel::KEY_NAME_UNIT_SHARES] = $unitShares;
+$_SESSION[StockParamModel::KEY_NAME_UNIT_VOLUME] = $unitVolume;
 $_SESSION[StockParamModel::KEY_NAME_SORT] = $sort;
 $_SESSION[StockParamModel::KEY_NAME_ORDER] = $order;
 
@@ -180,6 +186,30 @@ while ($result = $stock->getNext()) {
 最大
 <p>
 
+単元株数
+最小
+<input type = "text" class = "custom" name = "<?php echo StockParamModel::KEY_NAME_UNIT_SHARES ?>[]"
+  value = "<?php echo htmlspecialchars($unitShares[0], ENT_QUOTES, 'UTF-8'); ?>"
+>
+〜
+<input type = "text" class = "custom" name = "<?php echo StockParamModel::KEY_NAME_UNIT_SHARES ?>[]"
+  value = "<?php echo htmlspecialchars($unitShares[1], ENT_QUOTES, 'UTF-8'); ?>"
+>
+最大
+<p>
+
+単元出来高
+最小
+<input type = "text" class = "custom" name = "<?php echo StockParamModel::KEY_NAME_UNIT_VOLUME ?>[]"
+  value = "<?php echo htmlspecialchars($unitVolume[0], ENT_QUOTES, 'UTF-8'); ?>"
+>
+〜
+<input type = "text" class = "custom" name = "<?php echo StockParamModel::KEY_NAME_UNIT_VOLUME ?>[]"
+  value = "<?php echo htmlspecialchars($unitVolume[1], ENT_QUOTES, 'UTF-8'); ?>"
+>
+最大
+<p>
+
 並べ替え
 <select name = "sort">
 <?php
@@ -212,7 +242,7 @@ foreach ($orderKey as $key => $value) {
 
 <?php
 
-$stock->getPrepare($date, $selectedMarkets, $closingPrice, $rangePrice, $volume, $sort, $order);
+$stock->getPrepare($date, $selectedMarkets, $closingPrice, $rangePrice, $volume, $unitShares, $unitVolume, $sort, $order);
 
 echo "<table rules='all' border='1' cellspacing='0' cellpadding='2' style='font-size : 14px;' bordercolor='#a0b0ff'>";
 echo "<caption>$date</caption>";
@@ -243,15 +273,24 @@ while ($result = $stock->getNext()) {
         if ($i >= 3 && is_numeric($value)) {
 
             $colorValue = "000000";
+            $prefixValue = "";
+            $suffixValue = "";
 
-            // 前日比 または 騰落率 は文字色を変える
-            if ($key === '前日比' || $key === '騰落率') {
-                $colorValue = ($value < 0) ? $colorValue = "008822" : $colorValue = "FF0000";
+            if ($key === '前日比') {
+                $colorValue = colorForValue($value);
+                $prefixValue = ($value < 0) ? "▼" : "▲";
+            }
+
+            if ($key === '騰落率') {
+                $colorValue = colorForValue($value);
+                $suffixValue = "%";
             }
 
             // 桁区切りを行う。小数点以下が0埋めされるので空白で置き換え
             echo "<td align='right'><span style='color: #{$colorValue}'>" .
+                $prefixValue .
                 preg_replace("/\.?0+$/", "", number_format($value, 2)) .
+                $suffixValue .
                 "</span></td>";
         }
         else {
@@ -264,6 +303,11 @@ while ($result = $stock->getNext()) {
 }
 
 echo "</table>";
+
+function colorForValue($value) {
+    $colorValue = ($value < 0) ? $colorValue = "008822" : $colorValue = "FF0000";
+    return $colorValue;
+}
 
 
 ?>
