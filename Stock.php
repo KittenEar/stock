@@ -320,13 +320,22 @@ class Stock
     }
 
     /**
-     * 市場一覧取得
+     * 指定日の株価を取得
      *
      * @return boolean 成功 true、失敗 false
+     */
+    public function getPriceFromCode($code = "", $date = "") {
+    }
+
+    /**
+     * 市場一覧取得
+     *
+     * @return array 市場
      */
     public function getMarketList() {
 
         $db = new PDO($this->pdoConnect);
+        $retMarketList = [];
 
         $sql =
             "SELECT " .
@@ -338,9 +347,19 @@ class Stock
 
         $this->stmt = $db->query($sql);
 
+        while ($result = $this->stmt->fetch(PDO::FETCH_ASSOC)) {
+
+            $keys = array_keys($result);
+
+            foreach ($keys as $key) {
+                array_push($retMarketList, $result[$key]);
+            }
+        }
+
+        $stmt = null;
         $db = null;
 
-        return true;
+        return $retMarketList;
     }
 
     /**

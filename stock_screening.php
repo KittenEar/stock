@@ -43,18 +43,7 @@ else {
 
 // 初期状態の市場は"全選択"状態とする
 if ( ! $selectedMarkets ) {
-    $selectedMarkets = array();
-
-    $stock->getMarketList();
-
-    while ($result = $stock->getNext()) {
-
-        $keys = array_keys($result);
-
-        foreach ($keys as $key) {
-            array_push($selectedMarkets, $result[$key]);
-        }
-    }
+    $selectedMarkets = $stock->getMarketList();
 }
 
 // 初期状態のソートは"コード"
@@ -132,17 +121,11 @@ $(function() {
 <?php
 $selectedMarketsName = StockParamModel::KEY_NAME_SELECTED_MARKETS;
 
-$stock->getMarketList();
-while ($result = $stock->getNext()) {
+foreach ($stock->getMarketList() as $value) {
+    // 除外市場判定
+    $checked = in_array($value, $selectedMarkets, true) ? "checked='checked'" : "";
 
-    $keys = array_keys($result);
-
-    foreach ($keys as $key) {
-        // 除外市場判定
-        $checked = in_array($result[$key], $selectedMarkets, true) ? "checked='checked'" : "";
-
-        echo "<input type='checkbox' name='{$selectedMarketsName}[]' value='{$result[$key]}' {$checked}>{$result[$key]}<br>";
-    }
+    echo "<input type='checkbox' name='{$selectedMarketsName}[]' value='{$value}' {$checked}>{$value}<br>";
 }
 ?>
 </select>
