@@ -320,11 +320,82 @@ class Stock
     }
 
     /**
-     * 指定日の株価を取得
+     * コードと指定日から株価情報を取得
      *
      * @return boolean 成功 true、失敗 false
      */
-    public function getPriceFromCode($code = "", $date = "") {
+    public function getStockDayInfoFromCode($code = "", $date = "") {
+
+        if ( ! $this->checkDate($date) ) {
+            return false;
+        }
+
+        $itemNames = $this->itemNames;
+
+        $db = new PDO($this->pdoConnect);
+
+        // 株価データ取得
+        $sql =
+            "SELECT " .
+            "  MAIN.code                   AS {$itemNames[0]}, " .
+            "  MAIN.stock_name             AS {$itemNames[1]}, " .
+            "  MAIN.market                 AS {$itemNames[2]}, " .
+            "  DAY_BEFORE.closing_price    AS {$itemNames[3]}, " .
+            "  MAIN.opening_price          AS {$itemNames[4]}, " .
+            "  MAIN.high_price             AS {$itemNames[5]}, " .
+            "  MAIN.low_price              AS {$itemNames[6]}, " .
+            "  MAIN.closing_price          AS {$itemNames[7]}, " .
+            "  MAIN.closing_price - DAY_BEFORE.closing_price          AS {$itemNames[8]}, " .
+            "  cast((MAIN.closing_price - DAY_BEFORE.closing_price) as REAL) / DAY_BEFORE.closing_price * 100 AS {$itemNames[9]}, " .
+            "  MAIN.high_price - low_price AS range_price, " .
+            "  MAIN.volume                 AS {$itemNames[11]}, " .
+            "  MIZ.unit_shares             AS {$itemNames[12]}, " .
+            "  MIZ.unit_volume             AS {$itemNames[13]}, " .
+            "  MAIN.trading_value          AS {$itemNames[14]} " .
+            "FROM " .
+            "  stock AS MAIN LEFT JOIN " .
+            "    (SELECT " .                        // 前日終値を取得する
+            "      code, " .
+            "      closing_price ".
+            "    FROM " .
+            "      stock " .
+            "    WHERE " .
+            "      date = ( " .
+            "        SELECT " .                     // 指定日付の前日を取得
+            "          date " .
+            "        FROM " .
+            "          stock " .
+            "        WHERE " .
+            "          date < '$date' " .
+            "        ORDER BY " .
+            "          date DESC " .
+            "        LIMIT 1 ) " .
+            "    ) AS DAY_BEFORE ON MAIN.code = DAY_BEFORE.code LEFT JOIN " .
+            "    (SELECT " .
+            "      code || '-T' AS JOIN_CODE, " .
+            "      '20' || SUBSTR(date, 1, 2) || '-' || SUBSTR(date, 3, 2) || '-' || SUBSTR(date, 5, 2) AS JOIN_DATE, " .
+            "      unit_shares, " .
+            "      unit_volume, " .
+            "      per, " .
+            "      pbr, " .
+            "      avg5days, " .
+            "      avg25days, " .
+            "      avg75days, " .
+            "      avg5days_updown, " .
+            "      avg25days_updown, " .
+            "      avg75days_updown, " .
+            "      volume_rate, " .
+            "      before_5days_updown " .
+            "    FROM " .
+            "      stock_miz ) AS MIZ ON MAIN.code = MIZ.JOIN_CODE AND MAIN.date = MIZ.JOIN_DATE " .
+            "WHERE " .
+            "  MAIN.date = '$date'       " .
+            "  AND MAIN.code = '$code'       ";
+
+        // Debug::logPrintR($sql);
+
+        $this->stmt = $db->query($sql);
+        $db = null;
     }
 
     /**

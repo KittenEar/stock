@@ -272,7 +272,7 @@ while ($result = $stock->getNext()) {
             // 桁区切りを行う。小数点以下が0埋めされるので空白で置き換え
             echo "<td align='right'><span style='color: #{$colorValue}'>" .
                 $prefixValue .
-                preg_replace("/\.?0+$/", "", number_format($value, 2)) .
+                Common::changeStockFormat($value) .
                 $suffixValue .
                 "</span></td>";
         }

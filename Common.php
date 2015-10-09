@@ -77,6 +77,9 @@ final class Common
     private function __construct() {
     }
 
+    public static function changeStockFormat($value) {
+        return preg_replace("/\.?0+$/", "", number_format($value, 2));
+    }
 
 
 }

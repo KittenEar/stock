@@ -1,16 +1,23 @@
 <?php
+
 // require php version 5.4~
 
-require_once 'goutte-v2.0.4.phar';
-
-use Goutte\Client;
+require_once "autoload.php";
 
 session_start();
 
+$stock = new Stock();
+
+$date = new DateTime();
+$date->modify("-1 day");
+$dateFormat = $date->format(Common::DATE_FORMAT);
+$code = "4661-T";
+
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $addCode = $_POST['addCode'];
-    $allDelete = $_POST['allDelete'];
+    $addCode = isset($_POST['addCode']) ? $_POST['addCode'] : null;
+    $allDelete = isset($_POST['allDelete']) ? $_POST['allDelete'] : null;
+    $delete = isset($_POST['delete']) ? $_POST['delete'] : null;
 
     // 監視銘柄 全削除
     if ($allDelete) {
@@ -31,6 +38,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['monitor_stocks'] = $monitorStocks;
     }
 
+    if ($delete) {
+
+        $monitorStocks = $_SESSION['monitor_stocks'];
+
+        $keys = array_keys($delete);
+        $index = $keys[0];
+
+        unset($monitorStocks[$index - 1]);
+
+        $_SESSION['monitor_stocks'] = $monitorStocks;
+    }
 
 }
 
@@ -38,46 +56,6 @@ $monitorStocks = $_SESSION['monitor_stocks'];
 
 // var_dump($monitorStocks);
 
-/**
- * 株価クローラクラス
- *
- */
-class StockCrawler {
-
-    /**
-     * コンストラクタ
-     */
-    public function __construct() {
-
-    }
-
-    /**
-     * 現在の株価を取得する
-     *
-     * @param 整数値 $code 取得する株価コード
-     * @return mixed 株価、取得できなかった場合はNULL
-     */
-    public static function getStockPrice($code) {
-
-        $client = new Client();
-        $crawler = $client->request('GET', "http://stocks.finance.yahoo.co.jp/stocks/detail/?code={$code}.T");
-
-        // 2箇所ヒットしてしまう
-        $ary = $crawler->filter('td.stoksPrice')->each(function ($element) {
-            return $element->text();
-        });
-
-        // 絞込
-        foreach ($ary as $value) {
-            if (trim($value) != "") {
-                return $value;
-            }
-        }
-
-        return NULL;
-    }
-
-}
 
 
 ?>
@@ -92,25 +70,60 @@ class StockCrawler {
 
 
 <form action = "" method = "POST">
-監視銘柄コード<input type = "text" name = "addCode" placeholder = "xxxx" value =
-  "<?php echo htmlspecialchars($addCode, ENT_QUOTES, 'UTF-8'); ?>"
->
+監視銘柄コード<input type = "text" name = "addCode" placeholder = "xxxx" value = "">
 <input type = "submit" value = "追加">
-</form>
-
+<p>
 
 <?php
 
+echo "<table rules='all' border='1' cellspacing='0' cellpadding='2' style='font-size : 14px;' bordercolor='#a0b0ff'>";
+echo "<caption></caption>";
+echo "<tr>";
+
+// 項目行
+echo "<th bgcolor='#e0f0ff'>No.</th>";
+echo "<th bgcolor='#e0f0ff'>コード</th>";
+echo "<th bgcolor='#e0f0ff'>銘柄名</th>";
+echo "<th bgcolor='#e0f0ff'>市場</th>";
+echo "<th bgcolor='#e0f0ff'>前日終値</th>";
+echo "<th bgcolor='#e0f0ff'>前日高値</th>";
+echo "<th bgcolor='#e0f0ff'>前日安値</th>";
+echo "<th bgcolor='#e0f0ff'>現在値</th>";
+echo "<th bgcolor='#e0f0ff'>削除</th>";
+
+echo "</tr>";
+
+
+$count = 1;
 foreach ($monitorStocks as $code) {
 
+    echo "<tr>";
+
+    $stock->getStockDayInfoFromCode($code . "-T", $dateFormat);
+    $result = $stock->getNext();
+
     $price = StockCrawler::getStockPrice($code);
-    echo "{$code} -> {$price}";
-    echo "<br>";
+
+
+    echo "<td>" . $count . "</td>";
+    echo "<td>" . $result["コード"] . "</td>";
+    echo "<td>" . $result["銘柄名"] . "</td>";
+    echo "<td>" . $result["市場"] . "</td>";
+    echo "<td>" . Common::changeStockFormat($result["終値"]) . "</td>";     // 前日終値は前々回になるのでココでは終値を指定
+    echo "<td>" . Common::changeStockFormat($result["高値"]) . "</td>";
+    echo "<td>" . Common::changeStockFormat($result["安値"]) . "</td>";
+    echo "<td>" . $price . "</td>";
+    echo "<td><input type = 'submit' name = 'delete[{$count}]' value = '削除'></td>";
+
+    echo "</tr>";
+
+    $count++;
 }
+
+echo "</table>";
 ?>
 
-
-<form action = "" method = "POST">
+<p>
 監視銘柄全削除<input type = "submit" name = "allDelete" value = "全削除">
 </form>
 
@@ -121,7 +134,7 @@ foreach ($monitorStocks as $code) {
     {
         location.reload();
     }
-setTimeout("pageReload()", 15 * 1000);
+setTimeout("pageReload()", 60 * 1000);
 // -->
 </SCRIPT>
 
