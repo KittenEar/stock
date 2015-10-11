@@ -11,6 +11,12 @@ use Goutte\Client;
  */
 class StockCrawler {
 
+    private $nowPrice;              // 現在値
+    private $beforeClosingPrice;    // 前日終値
+    private $openingPrice;          // 始値
+    private $highPrice;             // 高値
+    private $lowPrice;              // 安値
+
     /**
      * コンストラクタ
      */
@@ -22,27 +28,70 @@ class StockCrawler {
      * 現在の株価を取得する
      *
      * @param 整数値 $code 取得する株価コード
-     * @return mixed 株価、取得できなかった場合はNULL
+     * @return bool true 成功
      */
-    public static function getStockPrice($code) {
+    public function getStockPrice($code) {
 
-        $client = new Client();
-        $crawler = $client->request('GET', "http://stocks.finance.yahoo.co.jp/stocks/detail/?code={$code}.T");
+        try {
 
-        // 2箇所ヒットしてしまう
-        $ary = $crawler->filter('td.stoksPrice')->each(function ($element) {
-            return $element->text();
-        });
+            $client = new Client();
+            $crawler = $client->request('GET', "http://stocks.finance.yahoo.co.jp/stocks/detail/?code={$code}.T");
 
-        // 絞込
-        foreach ($ary as $value) {
-            if (trim($value) != "") {
-                return $value;
+            // 前日終値、始値、高値、安値を取得する
+            $array = $crawler->filter('dd')->each(function ($element) {
+                $array = $element->filter('strong')->each(function ($element) {
+                    return $element->text();
+                });
+
+                // Debug::logPrintR($array);
+                return count($array) > 0 ? $array[0] : null;
+            });
+
+            // Debug::logPrintR($array);
+
+            // $array の要素は以下の様になっている
+            // [2] 前日終値
+            // [3] 始値
+            // [4] 高値
+            // [5] 安値
+            if (count($array) >= 6) {
+                $this->beforeClosingPrice = $this->removeComma($array[2]);
+                $this->openingPrice = $this->removeComma($array[3]);
+                $this->highPrice = $this->removeComma($array[4]);
+                $this->lowPrice = $this->removeComma($array[5]);
             }
+
+            // 現在値を取得する
+            $element = $crawler->filter('td.stoksPrice')->last();
+            $this->nowPrice = $this->removeComma($element->text());
+
+        }
+        catch (exception $e) {
+            // Debug::logPrintR($e);
+            return false;
         }
 
-        return NULL;
+        return true;
     }
 
+    public function getNowPrice() {
+        return $this->nowPrice;
+    }
+    public function getBeforeClosingPrice() {
+        return $this->beforeClosingPrice;
+    }
+    public function getOpeningPrice() {
+        return $this->openingPrice;
+    }
+    public function getHighPrice() {
+        return $this->highPrice;
+    }
+    public function getLowPrice() {
+        return $this->lowPrice;
+    }
+
+    private function removeComma($value) {
+        return str_replace(",", "", $value);
+    }
 }
 

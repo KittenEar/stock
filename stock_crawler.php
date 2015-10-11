@@ -4,14 +4,12 @@
 
 require_once "autoload.php";
 
-session_start();
-
 $stock = new Stock();
+$crawlerStore = new CrawlerStore();
 
 $date = new DateTime();
 $date->modify("-1 day");
-$dateFormat = $date->format(Common::DATE_FORMAT);
-$code = "4661-T";
+$beforeDate = $date->format(Common::DATE_FORMAT);
 
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -21,52 +19,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // 監視銘柄 全削除
     if ($allDelete) {
-        unset($_SESSION['monitor_stocks']);
+        $crawlerStore->allDelete();
     }
 
     // 監視銘柄 追加
     if ($addCode) {
-        // 登録済みの監視銘柄取得（この変数に追加する）
-        $monitorStocks = $_SESSION['monitor_stocks'];
-
-        if ( ! $monitorStocks ) {
-            $monitorStocks = array();
-        }
-
-        array_push($monitorStocks, $addCode);
-
-        $_SESSION['monitor_stocks'] = $monitorStocks;
+        $crawlerStore->addCode($addCode);
     }
 
     if ($delete) {
-
-        $monitorStocks = $_SESSION['monitor_stocks'];
-
-        $keys = array_keys($delete);
-        $index = $keys[0];
-
-        unset($monitorStocks[$index - 1]);
-
-        $_SESSION['monitor_stocks'] = $monitorStocks;
+        $crawlerStore->delete($delete);
     }
 
 }
 
-$monitorStocks = $_SESSION['monitor_stocks'];
-
-// var_dump($monitorStocks);
-
-
+$monitorStocks = $crawlerStore->getMonitorStocks();
 
 ?>
 
 <!Doctype html>
 <html lang = "ja">
 <head>
+<title>銘柄監視</title>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+<script Language="JavaScript">
+<!--
+    function pageReload()
+    {
+        location.reload();
+    }
+setTimeout("pageReload()", 60 * 1000);
+
+
+function nowDateTime() {
+    var date = Date();
+    document.writeln(date);
+}
+// -->
+</script>
 
 </head>
 <body>
+<p><a href="./index.html">戻る</a>
+<p><h3>銘柄監視</h3>
 
 
 <form action = "" method = "POST">
@@ -77,7 +73,7 @@ $monitorStocks = $_SESSION['monitor_stocks'];
 <?php
 
 echo "<table rules='all' border='1' cellspacing='0' cellpadding='2' style='font-size : 14px;' bordercolor='#a0b0ff'>";
-echo "<caption></caption>";
+echo "<caption><script type='text/javascript'>nowDateTime()</script></caption>";
 echo "<tr>";
 
 // 項目行
@@ -88,7 +84,12 @@ echo "<th bgcolor='#e0f0ff'>市場</th>";
 echo "<th bgcolor='#e0f0ff'>前日終値</th>";
 echo "<th bgcolor='#e0f0ff'>前日高値</th>";
 echo "<th bgcolor='#e0f0ff'>前日安値</th>";
+echo "<th bgcolor='#e0f0ff'>始値</th>";
+echo "<th bgcolor='#e0f0ff'>高値</th>";
+echo "<th bgcolor='#e0f0ff'>安値</th>";
 echo "<th bgcolor='#e0f0ff'>現在値</th>";
+echo "<th bgcolor='#e0f0ff'>GU/GD</th>";
+echo "<th bgcolor='#e0f0ff'>前日高値/安値ブレイク</th>";
 echo "<th bgcolor='#e0f0ff'>削除</th>";
 
 echo "</tr>";
@@ -99,20 +100,51 @@ foreach ($monitorStocks as $code) {
 
     echo "<tr>";
 
-    $stock->getStockDayInfoFromCode($code . "-T", $dateFormat);
-    $result = $stock->getNext();
+    $stock->getStockDayInfoFromCode($code . "-T", $beforeDate);
+    $beforeStock = $stock->getNext();
 
-    $price = StockCrawler::getStockPrice($code);
+    $crawler = new StockCrawler;
+    $crawler->getStockPrice($code);
 
+    $beforeClosingPrice = $beforeStock["終値"];
+    $beforeHighPrice = $beforeStock["高値"];
+    $beforeLowPrice = $beforeStock["安値"];
+    $openingPrice = $crawler->getOpeningPrice();
+    $highPrice = $crawler->getHighPrice();
+    $lowPrice = $crawler->getLowPrice();
+    $nowPrice = $crawler->getNowPrice();
+
+    // GU/GD 判定
+    $gugd = "-";
+    if ($openingPrice > $beforeHighPrice) {
+        $gugd = "GU +" . Common::changeStockFormat($openingPrice - $beforeHighPrice);
+    }
+    else if ($openingPrice < $beforeLowPrice) {
+        $gugd = "GD -" . Common::changeStockFormat($beforeLowPrice - $openingPrice);
+    }
+
+    // ブレイク判定
+    $break = "-";
+    if ($beforeHighPrice < $highPrice) {
+        $break = "前日高値ブレイク";
+    }
+    else if ($beforeLowPrice > $lowPrice) {
+        $break = "前日安値ブレイク";
+    }
 
     echo "<td>" . $count . "</td>";
-    echo "<td>" . $result["コード"] . "</td>";
-    echo "<td>" . $result["銘柄名"] . "</td>";
-    echo "<td>" . $result["市場"] . "</td>";
-    echo "<td>" . Common::changeStockFormat($result["終値"]) . "</td>";     // 前日終値は前々回になるのでココでは終値を指定
-    echo "<td>" . Common::changeStockFormat($result["高値"]) . "</td>";
-    echo "<td>" . Common::changeStockFormat($result["安値"]) . "</td>";
-    echo "<td>" . $price . "</td>";
+    echo "<td>" . $beforeStock["コード"] . "</td>";
+    echo "<td>" . $beforeStock["銘柄名"] . "</td>";
+    echo "<td>" . $beforeStock["市場"] . "</td>";
+    echo "<td>" . Common::changeStockFormat($beforeClosingPrice) . "</td>";
+    echo "<td>" . Common::changeStockFormat($beforeHighPrice) . "</td>";
+    echo "<td>" . Common::changeStockFormat($beforeLowPrice) . "</td>";
+    echo "<td>" . Common::changeStockFormat($openingPrice) . "</td>";
+    echo "<td>" . Common::changeStockFormat($highPrice) . "</td>";
+    echo "<td>" . Common::changeStockFormat($lowPrice) . "</td>";
+    echo "<td>" . Common::changeStockFormat($nowPrice) . "</td>";
+    echo "<td>" . $gugd . "</td>";
+    echo "<td>" . $break . "</td>";
     echo "<td><input type = 'submit' name = 'delete[{$count}]' value = '削除'></td>";
 
     echo "</tr>";
@@ -128,15 +160,6 @@ echo "</table>";
 </form>
 
 
-<SCRIPT Language="JavaScript">
-<!--
-    function pageReload()
-    {
-        location.reload();
-    }
-setTimeout("pageReload()", 60 * 1000);
-// -->
-</SCRIPT>
 
 </body>
 </html>
